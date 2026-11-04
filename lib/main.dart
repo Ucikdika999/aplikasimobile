@@ -2601,27 +2601,30 @@ class AccountTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF1E293B)),
       ),
-      child: ListTile(
-        onTap: onTap,
-        dense: true,
-        leading: Icon(
-          icon,
-          color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF38BDF8),
-          size: 20,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isDestructive ? const Color(0xFFEF4444) : Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 12,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          onTap: onTap,
+          dense: true,
+          leading: Icon(
+            icon,
+            color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF38BDF8),
+            size: 20,
           ),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: isDestructive ? const Color(0xFFEF4444) : Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 12),
         ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 12),
       ),
     );
   }

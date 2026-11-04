@@ -13,14 +13,15 @@ class AppTheme {
       brightness: Brightness.dark,
       fontFamily: fontName,
       scaffoldBackgroundColor: AppColors.background,
-      primaryColor: AppColors.accentCyan,
+      primaryColor: AppColors.electricSky,
       canvasColor: AppColors.background,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.accentCyan,
-        onPrimary: AppColors.primaryNavy,
-        secondary: AppColors.xpGold,
-        onSecondary: AppColors.primaryNavy,
-        surface: AppColors.surfaceCard,
+        primary: AppColors.electricSky,
+        onPrimary: Colors.white,
+        secondary: AppColors.deepRoyal,
+        onSecondary: Colors.white,
+        tertiary: AppColors.aiCognitiveAccent,
+        surface: AppColors.cardBackground,
         onSurface: AppColors.textWhite,
         error: AppColors.error,
         onError: Colors.white,
@@ -92,18 +93,21 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.textWhite),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.surfaceCard,
+        color: AppColors.cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border, width: 1),
+          side: const BorderSide(
+            color: AppColors.cardBorder,
+            width: AppColors.cardBorderWidth,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accentCyan,
-          foregroundColor: AppColors.primaryNavy,
+          backgroundColor: AppColors.electricSky,
+          foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -117,8 +121,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.accentCyan,
-          side: const BorderSide(color: AppColors.accentCyan, width: 1.5),
+          foregroundColor: AppColors.electricSky,
+          side: const BorderSide(color: AppColors.electricSky, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -131,19 +135,19 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceCard,
+        fillColor: AppColors.cardBackground,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accentCyan, width: 1.8),
+          borderSide: const BorderSide(color: AppColors.electricSky, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -159,19 +163,19 @@ class AppTheme {
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.primaryNavy,
-        selectedItemColor: AppColors.accentCyan,
+        backgroundColor: AppColors.cardBackground,
+        selectedItemColor: AppColors.electricSky,
         unselectedItemColor: AppColors.textSubtle,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accentCyan,
-        linearTrackColor: AppColors.surfaceCard,
+        color: AppColors.electricSky,
+        linearTrackColor: AppColors.cardBorder,
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColors.border,
-        thickness: 1,
+        color: AppColors.cardBorder,
+        thickness: 1.0,
         space: 1,
       ),
     );
