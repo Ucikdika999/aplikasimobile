@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'core/constants/app_colors.dart';
+import 'core/theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,21 +13,24 @@ class NexedApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NexedAI Mobile',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF070A0F),
-        fontFamily: 'sans-serif',
-      ),
-      home: const MobileFrameWrapper(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppTheme.themeNotifier,
+      builder: (context, currentThemeMode, _) {
+        return MaterialApp(
+          title: 'NexedAI Mobile',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: currentThemeMode,
+          home: const MobileFrameWrapper(),
+        );
+      },
     );
   }
 }
 
 // ============================================================================
-// 1. MOBILE FRAME WRAPPER (PENGATUR AUTENTIKASI & FRAME PONSEl WEB/DESKTOP)
+// 1. MOBILE FRAME WRAPPER (PENGATUR AUTENTIKASI & FRAME PONSEL WEB/DESKTOP)
 // ============================================================================
 class MobileFrameWrapper extends StatefulWidget {
   const MobileFrameWrapper({super.key});
@@ -35,28 +40,28 @@ class MobileFrameWrapper extends StatefulWidget {
 }
 
 class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
-  // Status Autentikasi Aplikasi
   bool _isLoggedIn = false;
-  bool _isRegistering = false; // Toggle antara Login & Register
+  bool _isRegistering = false;
 
-  // Data Profil Pengguna Aktif
-  String _userName = 'Ahmad Fauzi';
+  String _userName = 'Muhammad Hariz';
   String _userNim = 'V3922001';
   String _userRole = 'Mahasiswa';
 
-  // Indeks Navigasi Tab Utama
   int _currentIndex = 0;
 
-  void _onLogin(String email, String password) {
+  void _onLogin(String email, String password, [String? roleOverride]) {
     setState(() {
       _isLoggedIn = true;
       _userNim = email;
+      if (roleOverride != null) {
+        _userRole = roleOverride;
+      }
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('👋 Selamat datang di NexedAI, $_userName!'),
-        backgroundColor: const Color(0xFF10B981),
-        duration: const Duration(seconds: 3),
+        content: Text('Selamat datang di NexedAI, $_userName!'),
+        backgroundColor: AppColors.successGreen,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -70,9 +75,11 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('🎉 Akun $role berhasil didaftarkan! Selamat belajar, $name.'),
-        backgroundColor: const Color(0xFF10B981),
-        duration: const Duration(seconds: 3),
+        content: Text(
+          'Akun $role berhasil didaftarkan! Selamat belajar, $name.',
+        ),
+        backgroundColor: AppColors.successGreen,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -85,8 +92,7 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('🔒 Anda telah berhasil keluar dari akun.'),
-        backgroundColor: Color(0xFF38BDF8),
+        content: Text('Anda telah keluar dari sesi akun.'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -100,17 +106,17 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
         final screenHeight = constraints.maxHeight;
         final isMobileScreen = screenWidth <= 480;
 
-        // Konten Inti Aplikasi Berdasarkan Status Login
         Widget innerContent;
 
         if (!_isLoggedIn) {
-          // ALUR SEBELUM LOGIN (AUTENTIKASI)
           if (_isRegistering) {
             innerContent = RegisterScreen(
               onRegister: _onRegister,
@@ -123,34 +129,37 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
             );
           }
         } else {
-          // ALUR SETELAH LOGIN (DASHBOARD UTAMA DENGAN BOTTOM NAV)
           innerContent = Scaffold(
-            backgroundColor: const Color(0xFF0B0F17),
+            backgroundColor: AppColors.bg(isDark),
+            extendBody: true,
             body: SafeArea(
               bottom: false,
               child: Column(
                 children: [
-                  // Dynamic Island / Speaker Pill Ponsel (Mode Desktop Frame)
                   if (!isMobileScreen)
                     Center(
                       child: Container(
-                        margin: const EdgeInsets.only(top: 8, bottom: 6),
-                        width: 80,
+                        margin: const EdgeInsets.only(top: 8, bottom: 4),
+                        width: 72,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(2),
+                          color: AppColors.borderColor(isDark),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
                     ),
-
-                  // Konten Halaman Aktif Sesuai Tab
+                  // Top Ultra-Clean SaaS Header Bar (Sticky di semua tab)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                    child: _buildGlobalSaasHeader(isDark),
+                  ),
                   Expanded(
                     child: IndexedStack(
                       index: _currentIndex,
                       children: [
                         DashboardTab(
                           userName: _userName,
+                          userRole: _userRole,
                           onNavigateToTab: _onTabTapped,
                         ),
                         RoadmapTab(onNavigateToTab: _onTabTapped),
@@ -167,47 +176,45 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
                 ],
               ),
             ),
-            bottomNavigationBar: _buildBottomNavigationBar(),
+            bottomNavigationBar: _buildFloatingPillNavigationBar(isDark),
           );
         }
 
-        // Jika dibuka langsung di smartphone asli / layar sempit
         if (isMobileScreen) {
           return innerContent;
         }
 
-        // Tampilan Desktop Browser: Dibungkus container smartphone di tengah layar
-        final frameHeight = screenHeight > 920 ? 860.0 : (screenHeight - 32.0).clamp(580.0, 860.0);
+        final frameHeight = screenHeight > 920
+            ? 860.0
+            : (screenHeight - 32.0).clamp(580.0, 860.0);
 
         return Scaffold(
-          backgroundColor: const Color(0xFF070A0F),
+          backgroundColor: isDark
+              ? const Color(0xFF05080F)
+              : const Color(0xFFF1F5F9),
           body: Center(
             child: Container(
               width: 420,
               height: frameHeight,
               margin: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0B0F17),
-                borderRadius: BorderRadius.circular(36),
+                color: AppColors.bg(isDark),
+                borderRadius: BorderRadius.circular(38),
                 border: Border.all(
-                  color: const Color(0xFF1E293B),
+                  color: AppColors.borderColor(isDark),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    blurRadius: 35,
-                    offset: const Offset(0, 15),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    spreadRadius: 2,
+                    // ignore: deprecated_member_use
+                    color: Colors.black.withOpacity(isDark ? 0.55 : 0.08),
+                    blurRadius: 36,
+                    offset: const Offset(0, 16),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(34),
+                borderRadius: BorderRadius.circular(36),
                 child: innerContent,
               ),
             ),
@@ -217,40 +224,190 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
     );
   }
 
-  Widget _buildBottomNavigationBar() {
+  /// Header AppBar Global Bergaya Web NexedAI (Logo + Pill Kampus + Tombol Toggle Tema + Notifikasi)
+  Widget _buildGlobalSaasHeader(bool isDark) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF0D1424),
-        border: Border(
-          top: BorderSide(color: Color(0xFF1E293B), width: 1.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: AppColors.borderColor(isDark),
+          width: 1.0,
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const NexedLogoMark(size: 30),
+                const SizedBox(width: 8),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 15.5,
+                      color: AppColors.textPrimary(isDark),
+                      letterSpacing: -0.4,
+                    ),
+                    children: const [
+                      TextSpan(
+                        text: 'Nexed',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      TextSpan(
+                        text: 'AI',
+                        style: TextStyle(fontWeight: FontWeight.w300),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.pillBg(isDark),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.borderColor(isDark),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Text(
+                      'D3 TI SV UNS',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const NexedThemeToggleButton(),
+              const SizedBox(width: 6),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Notifikasi: Target praktikum minggu ini telah diperbarui.',
+                        ),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.pillBg(isDark),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.borderColor(isDark),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_none_rounded,
+                          color: AppColors.textPrimary(isDark),
+                          size: 18,
+                        ),
+                        Positioned(
+                          right: 9,
+                          top: 9,
+                          child: Container(
+                            width: 6.5,
+                            height: 6.5,
+                            decoration: const BoxDecoration(
+                              color: AppColors.electricSky,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Floating Pill Navigation Bar Modern
+  Widget _buildFloatingPillNavigationBar(bool isDark) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          // ignore: deprecated_member_use
+          color: AppColors.surface(isDark).withOpacity(0.96),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: AppColors.borderColor(isDark),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              // ignore: deprecated_member_use
+              color: Colors.black.withOpacity(isDark ? 0.35 : 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(
+                isDark: isDark,
                 index: 0,
-                icon: Icons.home_rounded,
+                icon: Icons.grid_view_rounded,
                 label: 'Beranda',
               ),
               _buildNavItem(
+                isDark: isDark,
                 index: 1,
-                icon: Icons.map_outlined,
-                label: 'Roadmap',
+                icon: Icons.account_tree_rounded,
+                label: 'Peta Belajar',
               ),
               _buildNavItem(
+                isDark: isDark,
                 index: 2,
-                icon: Icons.article_outlined,
-                label: 'Kuis AI',
+                icon: Icons.quiz_rounded,
+                label: 'Evaluasi AI',
               ),
               _buildNavItem(
+                isDark: isDark,
                 index: 3,
                 icon: Icons.person_outline_rounded,
-                label: 'Akun',
+                label: 'Profil',
               ),
             ],
           ),
@@ -260,46 +417,49 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
   }
 
   Widget _buildNavItem({
+    required bool isDark,
     required int index,
     required IconData icon,
     required String label,
   }) {
     final isActive = _currentIndex == index;
+    final activeBg = AppColors.buttonPrimary(isDark);
+    final activeFg = AppColors.buttonText(isDark);
+    final inactiveFg = AppColors.textMutedColor(isDark);
 
     return InkWell(
       onTap: () => _onTabTapped(index),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        child: Column(
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isActive ? 14 : 12,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isActive ? activeBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isActive)
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                width: 24,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF38BDF8),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              )
-            else
-              const SizedBox(height: 7),
             Icon(
               icon,
-              color: isActive ? const Color(0xFF38BDF8) : const Color(0xFF64748B),
-              size: 22,
+              color: isActive ? activeFg : inactiveFg,
+              size: 18,
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? const Color(0xFF38BDF8) : const Color(0xFF64748B),
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            if (isActive) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: activeFg,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -308,10 +468,10 @@ class _MobileFrameWrapperState extends State<MobileFrameWrapper> {
 }
 
 // ============================================================================
-// 2. HALAMAN LOGIN (AUTENTIKASI MASUK)
+// 2. HALAMAN LOGIN (IDENTIK WEB NEXEDAI: 1-KLIK ROLE PRESETS + MINIMALIST SAAS)
 // ============================================================================
 class LoginScreen extends StatefulWidget {
-  final Function(String email, String password) onLogin;
+  final Function(String email, String password, [String? roleOverride]) onLogin;
   final VoidCallback onNavigateToRegister;
 
   const LoginScreen({
@@ -325,10 +485,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController(text: 'V3922001');
-  final _passwordController = TextEditingController(text: 'secret123');
+  final _emailController = TextEditingController(text: 'mahasiswa@nexed.ai');
+  final _passwordController = TextEditingController(text: 'demo12345');
   bool _isPasswordVisible = false;
-  bool _rememberMe = true;
+  String _selectedQuickRole = 'Mahasiswa';
   String? _errorMessage;
 
   @override
@@ -338,336 +498,377 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _handleQuickDemo(String demoEmail, String role) {
+    setState(() {
+      _selectedQuickRole = role;
+      _emailController.text = demoEmail;
+      _passwordController.text = 'demo12345';
+      _errorMessage = null;
+    });
+    widget.onLogin(demoEmail, 'demo12345', role);
+  }
+
   void _handleLogin() {
     final email = _emailController.text.trim();
     final pass = _passwordController.text.trim();
 
     if (email.isEmpty || pass.isEmpty) {
       setState(() {
-        _errorMessage = 'Harap isi NIM/Email dan Kata Sandi terlebih dahulu.';
+        _errorMessage = 'Harap isi Email/NIM dan Kata Sandi terlebih dahulu.';
       });
       return;
     }
 
     setState(() => _errorMessage = null);
-    widget.onLogin(email, pass);
+    widget.onLogin(email, pass, _selectedQuickRole);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F17),
+      backgroundColor: AppColors.bg(isDark),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
-
-              // LOGO & BADGE NEXEDAI
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.bolt_rounded,
-                        color: Color(0xFF0B0F17),
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
-                        children: [
-                          TextSpan(text: 'Nexed', style: TextStyle(color: Colors.white)),
-                          TextSpan(text: 'AI', style: TextStyle(color: Color(0xFF38BDF8))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF334155), width: 0.8),
-                      ),
-                      child: const Text(
-                        'D3 TI SV UNS',
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // HEADER TEKS
-              const Text(
-                'Selamat Datang Kembali',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Masuk untuk mengakses materi kurikulum kognitif dan simulasi AI adaptifmu.',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 12.5,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 24),
-
-              // PESAN ERROR (JIKA ADA)
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
+              // Top Bar Login dengan Brand & Theme Toggle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                      const NexedLogoMark(size: 30),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 11.5),
+                      RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textPrimary(isDark),
+                            letterSpacing: -0.4,
+                          ),
+                          children: const [
+                            TextSpan(
+                              text: 'Nexed',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            TextSpan(
+                              text: 'AI',
+                              style: TextStyle(fontWeight: FontWeight.w300),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              // INPUT FIELD: EMAIL / NIM
-              const Text(
-                'EMAIL ATAU NIM',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-                ),
-                child: TextField(
-                  controller: _emailController,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.badge_outlined, color: Color(0xFF38BDF8), size: 20),
-                    hintText: 'Contoh: V3922001',
-                    hintStyle: TextStyle(color: Color(0xFF475569), fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // INPUT FIELD: KATA SANDI
-              const Text(
-                'KATA SANDI',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-                ),
-                child: TextField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF38BDF8), size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: const Color(0xFF64748B),
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                    ),
-                    hintText: 'Masukkan kata sandi',
-                    hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // REMEMBER ME & LUPA KATA SANDI
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  InkWell(
-                    onTap: () => setState(() => _rememberMe = !_rememberMe),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            activeColor: const Color(0xFF38BDF8),
-                            checkColor: const Color(0xFF0B0F17),
-                            side: const BorderSide(color: Color(0xFF334155), width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            onChanged: (val) => setState(() => _rememberMe = val ?? true),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Ingat Saya',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Hubungi admin prodi D3 TI SV UNS untuk reset password NIM.'),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Lupa Sandi?',
-                      style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11.5, fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  const NexedThemeToggleButton(),
                 ],
               ),
+              const SizedBox(height: 22),
 
-              const SizedBox(height: 16),
-
-              // TOMBOL MASUK AKUN
-              SizedBox(
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: _handleLogin,
-                  icon: const Icon(Icons.login_rounded, size: 18),
-                  label: const Text(
-                    'Masuk Akun',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.2),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: const Color(0xFF0B0F17),
-                    elevation: 4,
-                    shadowColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // DEMO QUICK HINT CHIP
+              // Main Auth Bento Card (Identik src/views/Login.tsx)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF1E293B)),
+                  color: AppColors.surface(isDark),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: AppColors.borderColor(isDark),
+                    width: 1.0,
+                  ),
                 ),
-                child: const Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.tips_and_updates_outlined, color: Color(0xFFF59E0B), size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Demo D3 TI: NIM "V3922001" terisi otomatis. Klik tombol di atas untuk langsung masuk.',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5, height: 1.3),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.pillBg(isDark),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.borderColor(isDark),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ADAPTIVE LEARNING • COGNITIVE AI',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Selamat Datang',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Masuk ke platform pembelajaran adaptif NEXED AI D3 TI SV UNS',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 1-Click Role Login Presets (Persis Web Login.tsx)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg(isDark),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: AppColors.borderColor(isDark),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'PILIH CEPAT ROLE:',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(isDark),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface(isDark),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: AppColors.borderColor(isDark),
+                                  ),
+                                ),
+                                child: Text(
+                                  '1-Klik Masuk',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(isDark),
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildQuickRoleButton(
+                                  isDark: isDark,
+                                  role: 'Mahasiswa',
+                                  email: 'mahasiswa@nexed.ai',
+                                  icon: Icons.school_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildQuickRoleButton(
+                                  isDark: isDark,
+                                  role: 'Dosen',
+                                  email: 'dosen@nexed.ai',
+                                  icon: Icons.menu_book_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildQuickRoleButton(
+                                  isDark: isDark,
+                                  role: 'Admin',
+                                  email: 'admin@nexed.ai',
+                                  icon: Icons.verified_user_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          // ignore: deprecated_member_use
+                          color: AppColors.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            // ignore: deprecated_member_use
+                            color: AppColors.error.withOpacity(0.35),
+                          ),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: AppColors.error,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    Text(
+                      'EMAIL AKADEMIK ATAU NIM',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _emailController,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(
+                          Icons.alternate_email_rounded,
+                          color: AppColors.textSecondary(isDark),
+                          size: 18,
+                        ),
+                        hintText: 'mahasiswa@nexed.ai',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'KATA SANDI',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(
+                          Icons.lock_outline_rounded,
+                          color: AppColors.textSecondary(isDark),
+                          size: 18,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.textMutedColor(isDark),
+                            size: 18,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                        hintText: 'Masukkan kata sandi',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Tombol Hitam Solid (Light) / Putih Solid (Dark)
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonPrimary(isDark),
+                          foregroundColor: AppColors.buttonText(isDark),
+                          shape: const StadiumBorder(),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Masuk ke Portal',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 16,
+                              color: AppColors.buttonText(isDark),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
 
-              const SizedBox(height: 24),
-
-              // TAUTAN PINDAH KE REGISTER
               Center(
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Text(
-                      'Belum punya akun? ',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+                    Text(
+                      'Belum memiliki akun praktikan? ',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 12.5,
+                      ),
                     ),
                     InkWell(
                       onTap: widget.onNavigateToRegister,
-                      child: const Text(
-                        'Daftar sekarang',
+                      child: Text(
+                        'Daftar Sekarang',
                         style: TextStyle(
-                          color: Color(0xFF38BDF8),
+                          color: AppColors.textPrimary(isDark),
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -675,8 +876,56 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              const SizedBox(height: 16),
+  Widget _buildQuickRoleButton({
+    required bool isDark,
+    required String role,
+    required String email,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedQuickRole == role;
+    final bg = isSelected
+        ? AppColors.buttonPrimary(isDark)
+        : AppColors.surface(isDark);
+    final fg = isSelected
+        ? AppColors.buttonText(isDark)
+        : AppColors.textPrimary(isDark);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _handleQuickDemo(email, role),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.buttonPrimary(isDark)
+                  : AppColors.borderColor(isDark),
+              width: 1.0,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: fg),
+              const SizedBox(height: 4),
+              Text(
+                role,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -686,10 +935,11 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ============================================================================
-// 3. HALAMAN REGISTER (PENDAFTARAN AKUN BARU)
+// 3. HALAMAN REGISTER (ULTRA-CLEAN MINIMALIST SAAS)
 // ============================================================================
 class RegisterScreen extends StatefulWidget {
-  final Function(String name, String email, String password, String role) onRegister;
+  final Function(String name, String email, String password, String role)
+      onRegister;
   final VoidCallback onNavigateToLogin;
 
   const RegisterScreen({
@@ -703,11 +953,11 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameController = TextEditingController(text: 'Ahmad Fauzi');
-  final _emailController = TextEditingController(text: 'V3922001');
-  final _passwordController = TextEditingController(text: 'secret123');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final String _selectedRole = 'Mahasiswa';
   bool _isPasswordVisible = false;
-  String _selectedRole = 'Mahasiswa';
   String? _errorMessage;
 
   @override
@@ -725,14 +975,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (name.isEmpty || email.isEmpty || pass.isEmpty) {
       setState(() {
-        _errorMessage = 'Semua field wajib diisi untuk pendaftaran kurikulum.';
-      });
-      return;
-    }
-
-    if (pass.length < 6) {
-      setState(() {
-        _errorMessage = 'Kata sandi minimal 6 karakter.';
+        _errorMessage = 'Semua kolom wajib diisi untuk membuat akun baru.';
       });
       return;
     }
@@ -743,349 +986,212 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F17),
+      backgroundColor: AppColors.bg(isDark),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
-
-              // HEADER KECIL & TOMBOL KEMBALI
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70, size: 22),
-                    onPressed: widget.onNavigateToLogin,
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Pendaftaran Akun Baru',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              // SUBTITLE PENDAFTARAN
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF1E293B)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.school_rounded, color: Color(0xFF38BDF8), size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Kurikulum D3 TI SV UNS',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onNavigateToLogin,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.pillBg(isDark),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.borderColor(isDark),
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Akses jalur kurikulum adaptif & active recall berbasis AI.',
-                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // ERROR MESSAGE
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded, color: Color(0xFFEF4444), size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 11.5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.arrow_back_rounded,
+                              size: 15,
+                              color: AppColors.textPrimary(isDark),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Kembali',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(isDark),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              // PILIHAN ROLE (MAHASISWA / DOSEN)
-              const Text(
-                'PERAN AKADEMIK',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildRoleSelector(
-                      role: 'Mahasiswa',
-                      icon: Icons.person_outline_rounded,
-                      subtitle: 'Pelajar Terdaftar',
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildRoleSelector(
-                      role: 'Dosen',
-                      icon: Icons.psychology_outlined,
-                      subtitle: 'Instruktur & Asisten',
-                    ),
-                  ),
+                  const NexedThemeToggleButton(),
                 ],
               ),
-
-              const SizedBox(height: 16),
-
-              // INPUT: NAMA LENGKAP
-              const Text(
-                'NAMA LENGKAP',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-                ),
-                child: TextField(
-                  controller: _nameController,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: Color(0xFF38BDF8), size: 20),
-                    hintText: 'Contoh: Ahmad Fauzi',
-                    hintStyle: TextStyle(color: Color(0xFF475569), fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // INPUT: EMAIL / NIM
-              const Text(
-                'EMAIL ATAU NIM KAMPUS',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-                ),
-                child: TextField(
-                  controller: _emailController,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.badge_outlined, color: Color(0xFF38BDF8), size: 20),
-                    hintText: 'Contoh: V3922001',
-                    hintStyle: TextStyle(color: Color(0xFF475569), fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // INPUT: KATA SANDI
-              const Text(
-                'KATA SANDI',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-                ),
-                child: TextField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF38BDF8), size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: const Color(0xFF64748B),
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                    ),
-                    hintText: 'Minimal 6 karakter',
-                    hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // TOMBOL UTAMA: MULAI BELAJAR GRATIS
-              SizedBox(
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: _handleRegister,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: const Text(
-                    'Mulai Belajar Gratis',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.2),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: const Color(0xFF0B0F17),
-                    elevation: 4,
-                    shadowColor: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 20),
 
-              // TAUTAN KEMBALI KE LOGIN
-              Center(
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(isDark),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Sudah punya akun? ',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+                    Text(
+                      'Registrasi Akun Akademik',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
+                      ),
                     ),
-                    InkWell(
-                      onTap: widget.onNavigateToLogin,
-                      child: const Text(
-                        'Masuk',
-                        style: TextStyle(
-                          color: Color(0xFF38BDF8),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          decoration: TextDecoration.underline,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bergabung dengan ekosistem pembelajaran adaptif D3 TI SV UNS.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          // ignore: deprecated_member_use
+                          color: AppColors.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: AppColors.error,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    Text(
+                      'NAMA LENGKAP',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _nameController,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 13.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: Muhammad Hariz',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'EMAIL ATAU NIM',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _emailController,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 13.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: V3922001',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'KATA SANDI',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 13.5,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Minimal 6 karakter',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 18,
+                          ),
+                          onPressed: () => setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _handleRegister,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonPrimary(isDark),
+                          foregroundColor: AppColors.buttonText(isDark),
+                          shape: const StadiumBorder(),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Mulai Belajar Sekarang',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 16),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleSelector({
-    required String role,
-    required IconData icon,
-    required String subtitle,
-  }) {
-    final isSelected = _selectedRole == role;
-
-    return InkWell(
-      onTap: () => setState(() => _selectedRole = role),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0284C7).withValues(alpha: 0.18) : const Color(0xFF131B2E),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF1E293B),
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF64748B),
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    role,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF64748B),
-                      fontSize: 9.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1093,178 +1199,234 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 // ============================================================================
-// 4. TAB BERANDA / DASHBOARD (PERSIS SCREENSHOT MOCKUP HP)
+// 4. TAB BERANDA / DASHBOARD (100% IDENTIK DENGAN STUDENTDASHBOARD.TSX WEB)
 // ============================================================================
 class DashboardTab extends StatelessWidget {
   final String userName;
+  final String userRole;
   final Function(int) onNavigateToTab;
 
   const DashboardTab({
     super.key,
-    this.userName = 'Ahmad Fauzi',
+    this.userName = 'Muhammad Hariz',
+    this.userRole = 'Mahasiswa',
     required this.onNavigateToTab,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 110.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. TOP BAR: LOGO NEXED AI + D3 TI SV UNS + LONCENG NOTIFIKASI
-          _buildTopBar(context),
-          const SizedBox(height: 18),
+          // CARD 1: HERO WELCOME BENTO CARD (Identik StudentDashboard.tsx)
+          _buildHeroWelcomeCard(context, isDark),
+          const SizedBox(height: 14),
 
-          // 2. KARTU LEVEL 10 • MASTER (350 / 500 XP)
-          _buildLevelCard(context),
-          const SizedBox(height: 12),
+          // CARD 2: GAMIFICATION XP & STREAK BENTO CARD
+          _buildXpAndStreakBento(context, isDark),
+          const SizedBox(height: 14),
 
-          // 3. KARTU MODUL AKTIF (LOOPING & ITERASI)
-          _buildActiveModuleCard(context),
+          // CARD 3: ACTIVE LEARNING TRACKER (MODUL AKTIF)
+          _buildActiveModuleBento(context, isDark),
           const SizedBox(height: 22),
 
-          // 4. JUDUL SEKSI "AKSI CEPAT AI"
-          const Text(
-            'Aksi Cepat AI',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // 5. GRID 2X2 KARTU AKSI CEPAT
-          _buildQuickActionsGrid(context),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            // Ikon Petir Bersudut Biru
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.bolt_rounded,
-                color: Color(0xFF0B0F17),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            // Brand NexedAI
-            RichText(
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'Nexed',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  TextSpan(
-                    text: 'AI',
-                    style: TextStyle(color: Color(0xFF38BDF8)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Badge Khusus "D3 TI SV UNS"
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: const Color(0xFF334155),
-                  width: 0.8,
-                ),
-              ),
-              child: const Text(
-                'D3 TI SV UNS',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        // Lonceng Notifikasi
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF131B2E),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: const Color(0xFF1E293B),
-              width: 1,
-            ),
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
+          // SECTION HEADER: AKSI CEPAT AI
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(
-                Icons.notifications_none_rounded,
-                color: Color(0xFF94A3B8),
-                size: 20,
+              Text(
+                'Aksi Cepat AI',
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
               ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF38BDF8),
-                    shape: BoxShape.circle,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.pillBg(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
+                ),
+                child: Text(
+                  'Bento Grid 2x2',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+
+          // CARD 4: 2X2 BENTO GRID AKSI CEPAT AI
+          _buildQuickActionsBentoGrid(context, isDark),
+        ],
+      ),
     );
   }
 
-  Widget _buildLevelCard(BuildContext context) {
+  Widget _buildHeroWelcomeCard(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF131B2E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF1E293B),
-          width: 1.2,
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderColor(isDark), width: 1.0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildPillTag(isDark, 'Level 3 • Praktikan Terampil'),
+              _buildPillTag(isDark, 'Semester 4 • TI SV UNS'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Selamat Datang, $userName',
+            style: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Studio Praktikum Algoritma & Pemrograman',
+            style: TextStyle(
+              color: AppColors.textPrimary(isDark),
+              fontSize: 19,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.5,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pantau capaian praktikum mingguan, eksplorasi modul terstruktur, dan jalankan simulasi penguatan logika komputasi.',
+            style: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Divider(color: AppColors.borderSubtle(isDark), height: 1),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.track_changes_rounded,
+                      size: 15,
+                      color: AppColors.violetAi,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '3 dari 5 Modul Tuntas',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(isDark),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onNavigateToTab(1),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.buttonPrimary(isDark),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Buka Silabus Modul',
+                          style: TextStyle(
+                            color: AppColors.buttonText(isDark),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: AppColors.buttonText(isDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPillTag(bool isDark, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.pillBg(isDark),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.borderColor(isDark), width: 1.0),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: AppColors.textPrimary(isDark),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+
+  Widget _buildXpAndStreakBento(BuildContext context, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderColor(isDark), width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1272,58 +1434,78 @@ class DashboardTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF1E293B)),
-                    ),
-                    child: const Icon(
-                      Icons.military_tech_rounded,
-                      color: Color(0xFFF59E0B),
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Level 10 • Master',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              Text(
+                'TOTAL PENGALAMAN',
+                style: TextStyle(
+                  color: AppColors.textSecondary(isDark),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                ),
               ),
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.pillBg(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextSpan(
-                      text: '350',
-                      style: TextStyle(color: Color(0xFF38BDF8)),
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      color: AppColors.amberBadge,
+                      size: 14,
                     ),
-                    TextSpan(
-                      text: ' / 500 XP',
-                      style: TextStyle(color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '12 Hari Streak',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '350 XP',
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
+                  fontSize: 26,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '/ 500 XP Target Level 10 • Master',
+                style: TextStyle(
+                  color: AppColors.textSecondary(isDark),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: SizedBox(
-              height: 5.5,
-              child: LinearProgressIndicator(
-                value: 0.70,
-                backgroundColor: const Color(0xFF1E293B),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: 0.70,
+              minHeight: 7,
+              backgroundColor: AppColors.pillBg(isDark),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppColors.buttonPrimary(isDark),
               ),
             ),
           ),
@@ -1332,57 +1514,116 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveModuleCard(BuildContext context) {
-    return InkWell(
-      onTap: () => onNavigateToTab(1),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF131B2E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Looping & Iterasi: Optimasi',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
+  Widget _buildActiveModuleBento(BuildContext context, bool isDark) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onNavigateToTab(1),
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surface(isDark),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.borderColor(isDark), width: 1.0),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'PRIORITAS MATERI AKTIF',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      // ignore: deprecated_member_use
+                      color: AppColors.successGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        // ignore: deprecated_member_use
+                        color: AppColors.successGreen.withOpacity(0.35),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tuntas 3/4 Bab',
+                      style: TextStyle(
+                        color: AppColors.successGreen,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Tuntas 3/3 Tantangan Algoritma',
-              style: TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: SizedBox(
-                height: 5.5,
-                child: LinearProgressIndicator(
-                  value: 1.0,
-                  backgroundColor: const Color(0xFF1E293B),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+              const SizedBox(height: 10),
+              Text(
+                'Looping & Iterasi: Optimasi Tantangan Algoritma',
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDark),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  letterSpacing: -0.3,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                'Akurasi logika nested loop berada di 64%. Coba latihan pengulangan terpandu sebelum responsi praktikum.',
+                style: TextStyle(
+                  color: AppColors.textSecondary(isDark),
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.pillBg(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Mulai Penguatan Topik',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 14,
+                      color: AppColors.textPrimary(isDark),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildQuickActionsGrid(BuildContext context) {
+  Widget _buildQuickActionsBentoGrid(BuildContext context, bool isDark) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1391,48 +1632,47 @@ class DashboardTab extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.15,
       children: [
-        // 1. Upload Modul (PDF / DOCX)
-        _buildActionCard(
-          icon: Icons.description_rounded,
-          iconColor: const Color(0xFF3B82F6),
-          iconBg: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
+        _buildBentoCard(
+          isDark: isDark,
+          icon: Icons.upload_file_rounded,
+          accentColor: AppColors.electricSky,
+          tag: 'RAG Engine',
           title: 'Upload Modul',
-          subtitle: '(PDF / DOCX)',
+          subtitle: 'PDF / DOCX RAG Extraction',
           onTap: () => _showUploadModal(context),
         ),
-
-        // 2. Simulasi AI (Active Recall)
-        _buildActionCard(
+        _buildBentoCard(
+          isDark: isDark,
           icon: Icons.psychology_rounded,
-          iconColor: const Color(0xFF06B6D4),
-          iconBg: const Color(0xFF0891B2).withValues(alpha: 0.25),
-          title: 'Simulasi AI',
-          subtitle: '(Active Recall)',
+          accentColor: AppColors.violetAi,
+          tag: 'Simulasi',
+          title: 'Evaluasi AI',
+          subtitle: 'Active Recall Quiz',
           onTap: () => onNavigateToTab(2),
         ),
-
-        // 3. Tes Diagnostik (Adaptif)
-        _buildActionCard(
+        _buildBentoCard(
+          isDark: isDark,
           icon: Icons.alt_route_rounded,
-          iconColor: const Color(0xFFA855F7),
-          iconBg: const Color(0xFF7E22CE).withValues(alpha: 0.25),
-          title: 'Tes Diagnostik',
-          subtitle: '(Adaptif)',
+          accentColor: AppColors.electricSky,
+          tag: 'Kurikulum',
+          title: 'Peta Belajar',
+          subtitle: 'Dynamic AI Roadmap',
           onTap: () => onNavigateToTab(1),
         ),
-
-        // 4. Tutor Kognitif (Tanya Jawab)
-        _buildActionCard(
+        _buildBentoCard(
+          isDark: isDark,
           icon: Icons.smart_toy_rounded,
-          iconColor: const Color(0xFF6366F1),
-          iconBg: const Color(0xFF4338CA).withValues(alpha: 0.25),
-          title: 'Tutor Kognitif',
-          subtitle: '(Tanya Jawab)',
+          accentColor: AppColors.successGreen,
+          tag: '24/7 Tutor',
+          title: 'Asisten AI',
+          subtitle: 'Tanya AI Kognitif',
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Tutor AI: "Halo! Ada materi kuliah algoritma yang ingin kamu tanyakan?"'),
-                duration: Duration(seconds: 3),
+                content: Text(
+                  'Asisten AI Kognitif: "Halo! Silakan pilih bab pada Peta Belajar atau Evaluasi untuk berdiskusi."',
+                ),
+                duration: Duration(seconds: 2),
               ),
             );
           },
@@ -1441,59 +1681,106 @@ class DashboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard({
+  Widget _buildBentoCard({
+    required bool isDark,
     required IconData icon,
-    required Color iconColor,
-    required Color iconBg,
+    required Color accentColor,
+    required String tag,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF131B2E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: iconBg,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 26,
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface(isDark),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppColors.borderColor(isDark),
+              width: 1.0,
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.pillBg(isDark),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderColor(isDark)),
+                    ),
+                    child: Icon(icon, color: accentColor, size: 20),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.pillBg(isDark),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 10,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(isDark),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.north_east_rounded,
+                        size: 14,
+                        color: AppColors.textMutedColor(isDark),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1510,7 +1797,7 @@ class DashboardTab extends StatelessWidget {
 }
 
 // ============================================================================
-// 4B. MODAL UPLOAD MODUL PERKULIAHAN (INTERAKTIF & BEBAS OVERFLOW)
+// 4B. MODAL UPLOAD MODUL PERKULIAHAN (DUAL THEME MINIMALIST SAAS)
 // ============================================================================
 class UploadModuleModal extends StatefulWidget {
   const UploadModuleModal({super.key});
@@ -1542,8 +1829,10 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
     if (_selectedFileName == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('⚠️ Harap pilih file dokumen modul PDF/DOCX terlebih dahulu.'),
-          backgroundColor: Color(0xFFEF4444),
+          content: Text(
+            'Harap pilih file dokumen modul PDF/DOCX terlebih dahulu.',
+          ),
+          backgroundColor: AppColors.error,
           duration: Duration(seconds: 2),
         ),
       );
@@ -1554,25 +1843,15 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
       _isProcessing = true;
     });
 
-    // Simulasi loading AI analisis dokumen selama 2 detik
     Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Modul berhasil diekstrak ke grafik kurikulum adaptif!',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
+          content: Text(
+            'Modul berhasil diekstrak ke grafik kurikulum adaptif!',
           ),
-          backgroundColor: Color(0xFF10B981),
+          backgroundColor: AppColors.successGreen,
           duration: Duration(seconds: 3),
         ),
       );
@@ -1581,17 +1860,21 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF131B2E),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
         ),
-        border: Border(top: BorderSide(color: Color(0xFF1E293B), width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.borderColor(isDark), width: 1.0),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -1607,100 +1890,93 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drag Handle Bar Atas
               Center(
                 child: Container(
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF334155),
+                    color: AppColors.borderColor(isDark),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Header Modal
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Upload Modul Perkuliahan',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(isDark),
+                      fontWeight: FontWeight.w700,
                       fontSize: 16,
                     ),
                   ),
                   IconButton(
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                    onPressed: _isProcessing ? null : () => Navigator.pop(context),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary(isDark),
+                      size: 20,
+                    ),
+                    onPressed:
+                        _isProcessing ? null : () => Navigator.pop(context),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Ekstrak materi kuliah secara otomatis ke dalam grafik kurikulum adaptif.',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.textSecondary(isDark),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 18),
-
-              // Kotak Area Pemilihan File (Interaktif dengan InkWell)
               if (_selectedFileName == null)
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: _isProcessing ? null : _simulatePickFile,
-                    borderRadius: BorderRadius.circular(16),
-                    splashColor: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                    highlightColor: const Color(0xFF38BDF8).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 26,
+                        horizontal: 16,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(16),
+                        color: AppColors.pillBg(isDark),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                          width: 1.5,
+                          color: AppColors.borderColor(isDark),
                         ),
                       ),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.cloud_upload_outlined,
-                              color: Color(0xFF38BDF8),
-                              size: 32,
-                            ),
+                          Icon(
+                            Icons.cloud_upload_outlined,
+                            color: AppColors.textPrimary(isDark),
+                            size: 32,
                           ),
                           const SizedBox(height: 10),
-                          const Text(
+                          Text(
                             'Pilih File PDF atau DOCX',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary(isDark),
+                              fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Klik di sini untuk simulasi pemilihan dokumen modul',
-                            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w600),
+                          Text(
+                            'Klik untuk simulasi unggah dokumen silabus SV UNS',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(isDark),
+                              fontSize: 11,
+                            ),
                             textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Maksimal ukuran 25MB • Kurikulum SV UNS',
-                            style: TextStyle(color: Color(0xFF64748B), fontSize: 10),
                           ),
                         ],
                       ),
@@ -1708,72 +1984,39 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
                   ),
                 )
               else
-                // Tampilan File yang Berhasil Terpilih
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.6),
-                      width: 1.5,
-                    ),
+                    color: AppColors.pillBg(isDark),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.successGreen),
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          color: Color(0xFF10B981),
-                          size: 26,
-                        ),
+                      const Icon(
+                        Icons.picture_as_pdf_rounded,
+                        color: AppColors.successGreen,
+                        size: 24,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: const [
-                                Icon(
-                                  Icons.check_circle_rounded,
-                                  color: Color(0xFF10B981),
-                                  size: 15,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'File Terpilih',
-                                  style: TextStyle(
-                                    color: Color(0xFF10B981),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
                             Text(
                               _selectedFileName!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(isDark),
+                                fontWeight: FontWeight.w600,
                                 fontSize: 12.5,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
                             Text(
                               '$_selectedFileSize • Siap diekstrak',
-                              style: const TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 10.5,
+                              style: TextStyle(
+                                color: AppColors.textSecondary(isDark),
+                                fontSize: 11,
                               ),
                             ),
                           ],
@@ -1781,66 +2024,36 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
                       ),
                       if (!_isProcessing)
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444), size: 20),
-                          tooltip: 'Hapus file',
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: AppColors.error,
+                            size: 18,
+                          ),
                           onPressed: _removeFile,
                         ),
                     ],
                   ),
                 ),
-
               const SizedBox(height: 20),
-
-              // Tombol Utama: "Proses Modul dengan AI"
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   onPressed: _isProcessing ? null : _processModuleWithAi,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: const Color(0xFF0B0F17),
-                    disabledBackgroundColor: const Color(0xFF1E293B),
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    backgroundColor: AppColors.buttonPrimary(isDark),
+                    foregroundColor: AppColors.buttonText(isDark),
+                    shape: const StadiumBorder(),
                   ),
-                  child: _isProcessing
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Menganalisis Dokumen AI...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.auto_awesome, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Proses Modul dengan AI',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ],
-                        ),
+                  child: Text(
+                    _isProcessing
+                        ? 'Menganalisis Dokumen AI...'
+                        : 'Proses Modul dengan AI',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1852,7 +2065,7 @@ class _UploadModuleModalState extends State<UploadModuleModal> {
 }
 
 // ============================================================================
-// 5. TAB ROADMAP (ALUR KURIKULUM BERTINGKAT & MODAL VIDEO PEMBELAJARAN)
+// 5. TAB ROADMAP (ALUR KURIKULUM BERTINGKAT ULTRA-CLEAN SAAS)
 // ============================================================================
 class RoadmapTab extends StatelessWidget {
   final Function(int) onNavigateToTab;
@@ -1861,26 +2074,21 @@ class RoadmapTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 110.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Roadmap
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF131B2E), Color(0xFF1E293B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.3),
-              ),
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.borderColor(isDark)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1889,51 +2097,77 @@ class RoadmapTab extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
                       ),
-                      child: const Text(
+                      decoration: BoxDecoration(
+                        color: AppColors.pillBg(isDark),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: AppColors.borderColor(isDark),
+                        ),
+                      ),
+                      child: Text(
                         'Semester 1 • Wajib',
-                        style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: AppColors.textPrimary(isDark),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       '3/5 Modul Tuntas',
-                      style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                const SizedBox(height: 10),
+                Text(
                   'Algoritma & Pemrograman',
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Jalur belajar adaptif terstruktur dari logika dasar hingga analisis kompleksitas Big-O.',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.4),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
-
-          const Text(
-            'Alur Kurikulum Kognitif',
-            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+          Text(
+            'Peta Kurikulum Kognitif',
+            style: TextStyle(
+              color: AppColors.textPrimary(isDark),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 14),
-
-          // Daftar Node Alur Vertikal Bertingkat
           _buildRoadmapNode(
             context: context,
+            isDark: isDark,
             stepNumber: '1',
             title: 'Sintaks Dasar, Variabel & I/O',
-            description: 'Tipe data primitif, alokasi memori stack vs heap, dan stream buffer input/output.',
+            description:
+                'Tipe data primitif, alokasi memori stack vs heap, dan stream buffer input/output.',
             status: 'Selesai',
-            statusColor: const Color(0xFF10B981),
+            statusColor: AppColors.successGreen,
             xpReward: '+100 XP',
             isCurrent: false,
             isLocked: false,
@@ -1941,11 +2175,13 @@ class RoadmapTab extends StatelessWidget {
           ),
           _buildRoadmapNode(
             context: context,
+            isDark: isDark,
             stepNumber: '2',
             title: 'Struktur Percabangan (If-Else & Switch)',
-            description: 'Evaluasi boolean algebra, tabel kebenaran logika kondisional, dan jump tables.',
+            description:
+                'Evaluasi boolean algebra, tabel kebenaran logika kondisional, dan jump tables.',
             status: 'Selesai',
-            statusColor: const Color(0xFF10B981),
+            statusColor: AppColors.successGreen,
             xpReward: '+150 XP',
             isCurrent: false,
             isLocked: false,
@@ -1953,11 +2189,13 @@ class RoadmapTab extends StatelessWidget {
           ),
           _buildRoadmapNode(
             context: context,
+            isDark: isDark,
             stepNumber: '3',
             title: 'Looping & Iterasi (For vs While)',
-            description: 'Mekanisme loop counters, invariant perulangan, dan optimasi early termination.',
+            description:
+                'Mekanisme loop counters, invariant perulangan, dan optimasi early termination.',
             status: 'Sedang Belajar',
-            statusColor: const Color(0xFF38BDF8),
+            statusColor: AppColors.electricSky,
             xpReward: '+180 XP',
             isCurrent: true,
             isLocked: false,
@@ -1966,11 +2204,13 @@ class RoadmapTab extends StatelessWidget {
           ),
           _buildRoadmapNode(
             context: context,
+            isDark: isDark,
             stepNumber: '4',
             title: 'Fungsi, Prosedur & Rekursi',
-            description: 'Call stack frames, parameter passing, base case, dan stack overflow hazard.',
+            description:
+                'Call stack frames, parameter passing, base case, dan stack overflow hazard.',
             status: 'Terkunci',
-            statusColor: const Color(0xFF64748B),
+            statusColor: AppColors.textMutedColor(isDark),
             xpReward: '+250 XP',
             isCurrent: false,
             isLocked: true,
@@ -1978,17 +2218,18 @@ class RoadmapTab extends StatelessWidget {
           ),
           _buildRoadmapNode(
             context: context,
+            isDark: isDark,
             stepNumber: '5',
             title: 'Kompleksitas Waktu & Big-O Notation',
-            description: 'Analisis asymptotic runtime O(1), O(log n), O(n), hingga O(n²) tradeoffs.',
+            description:
+                'Analisis asymptotic runtime O(1), O(log n), O(n), hingga O(n²) tradeoffs.',
             status: 'Terkunci',
-            statusColor: const Color(0xFF64748B),
+            statusColor: AppColors.textMutedColor(isDark),
             xpReward: '+300 XP',
             isCurrent: false,
             isLocked: true,
             isLast: true,
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -1996,6 +2237,7 @@ class RoadmapTab extends StatelessWidget {
 
   Widget _buildRoadmapNode({
     required BuildContext context,
+    required bool isDark,
     required String stepNumber,
     required String title,
     required String description,
@@ -2011,7 +2253,6 @@ class RoadmapTab extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Kolom Indikator Vertikal & Garis
           SizedBox(
             width: 32,
             child: Column(
@@ -2021,53 +2262,60 @@ class RoadmapTab extends StatelessWidget {
                   height: 28,
                   decoration: BoxDecoration(
                     color: isCurrent
-                        ? const Color(0xFF38BDF8)
-                        : (isLocked ? const Color(0xFF1E293B) : const Color(0xFF10B981)),
+                        ? AppColors.buttonPrimary(isDark)
+                        : (isLocked
+                            ? AppColors.pillBg(isDark)
+                            : AppColors.successGreen),
                     shape: BoxShape.circle,
-                    boxShadow: isCurrent
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF38BDF8).withValues(alpha: 0.4),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
+                    border: Border.all(color: AppColors.borderColor(isDark)),
                   ),
                   child: Center(
                     child: isLocked
-                        ? const Icon(Icons.lock_rounded, color: Color(0xFF64748B), size: 14)
+                        ? Icon(
+                            Icons.lock_outline_rounded,
+                            color: AppColors.textMutedColor(isDark),
+                            size: 14,
+                          )
                         : (isCurrent
-                            ? Text(stepNumber,
-                                style: const TextStyle(
-                                    color: Color(0xFF0B0F17), fontWeight: FontWeight.bold, fontSize: 13))
-                            : const Icon(Icons.check_rounded, color: Colors.white, size: 16)),
+                            ? Text(
+                                stepNumber,
+                                style: TextStyle(
+                                  color: AppColors.buttonText(isDark),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 15,
+                              )),
                   ),
                 ),
                 if (!isLast)
                   Expanded(
                     child: Container(
-                      width: 2,
-                      color: isLocked ? const Color(0xFF1E293B) : const Color(0xFF334155),
+                      width: 1.5,
+                      color: AppColors.borderColor(isDark),
                     ),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 14),
-
-          // Kartu Konten Modul
+          const SizedBox(width: 12),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 20.0),
+              padding: const EdgeInsets.only(bottom: 16.0),
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isCurrent ? const Color(0xFF131F37) : const Color(0xFF131B2E),
-                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.surface(isDark),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(
-                    color: isCurrent ? const Color(0xFF38BDF8) : const Color(0xFF1E293B),
-                    width: isCurrent ? 1.5 : 1.0,
+                    color: isCurrent
+                        ? AppColors.textPrimary(isDark)
+                        : AppColors.borderColor(isDark),
+                    width: isCurrent ? 1.4 : 1.0,
                   ),
                 ),
                 child: Column(
@@ -2077,19 +2325,30 @@ class RoadmapTab extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color: AppColors.pillBg(isDark),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             status,
-                            style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         Text(
                           xpReward,
-                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -2097,54 +2356,70 @@ class RoadmapTab extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: isLocked ? const Color(0xFF64748B) : Colors.white,
+                        color: isLocked
+                            ? AppColors.textMutedColor(isDark)
+                            : AppColors.textPrimary(isDark),
                         fontWeight: FontWeight.w700,
-                        fontSize: 13,
+                        fontSize: 13.5,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, height: 1.4),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 11.5,
+                        height: 1.4,
+                      ),
                     ),
-
                     if (showActions) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
-                          // Tombol Putar Video Kuliah
                           Expanded(
                             child: SizedBox(
                               height: 36,
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  _showVideoModal(context, title);
-                                },
-                                icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
-                                label: const Text('Tonton Video', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                onPressed: () =>
+                                    _showVideoModal(context, title),
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 16,
+                                ),
+                                label: const Text(
+                                  'Materi Video',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF38BDF8),
-                                  foregroundColor: const Color(0xFF0B0F17),
+                                  backgroundColor:
+                                      AppColors.buttonPrimary(isDark),
+                                  foregroundColor: AppColors.buttonText(isDark),
                                   padding: EdgeInsets.zero,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: const StadiumBorder(),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // Tombol Kuis Evaluasi
                           Expanded(
                             child: SizedBox(
                               height: 36,
                               child: OutlinedButton.icon(
                                 onPressed: () => onNavigateToTab(2),
-                                icon: const Icon(Icons.quiz_rounded, size: 16),
-                                label: const Text('Kuis Evaluasi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                icon: const Icon(Icons.quiz_outlined, size: 15),
+                                label: const Text(
+                                  'Latihan Kuis',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Color(0xFF334155)),
                                   padding: EdgeInsets.zero,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: const StadiumBorder(),
                                 ),
                               ),
                             ),
@@ -2173,7 +2448,7 @@ class RoadmapTab extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. TAB KUIS AI / ACTIVE RECALL (RESPON INSTAN <50ms & PENJELASAN AI)
+// 6. TAB KUIS AI / ACTIVE RECALL (DUAL THEME MINIMALIST SAAS)
 // ============================================================================
 class ActiveRecallTab extends StatefulWidget {
   const ActiveRecallTab({super.key});
@@ -2190,7 +2465,8 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
 
   final List<Map<String, dynamic>> _quizQuestions = [
     {
-      'question': 'Manakah perbedaan mendasar antara perulangan "for" dan "while"?',
+      'question':
+          'Manakah perbedaan mendasar antara perulangan "for" dan "while"?',
       'options': [
         'For hanya untuk tipe integer, while hanya untuk boolean.',
         'For digunakan saat jumlah iterasi pasti, while saat batas iterasi bergantung kondisi dinamis.',
@@ -2198,10 +2474,12 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
         'For tidak mendukung klausa break.',
       ],
       'correct': 1,
-      'explanation': 'For loop ideal untuk putaran terhitung (counted loop). Sedangkan While loop mengevaluasi syarat boolean dinamis di setiap awal iterasi hingga kondisi menjadi false.',
+      'explanation':
+          'For loop ideal untuk putaran terhitung (counted loop). Sedangkan While loop mengevaluasi syarat boolean dinamis di setiap awal iterasi hingga kondisi menjadi false.',
     },
     {
-      'question': 'Apa yang terjadi jika fungsi rekursif tidak memiliki "Base Case"?',
+      'question':
+          'Apa yang terjadi jika fungsi rekursif tidak memiliki "Base Case"?',
       'options': [
         'Program otomatis mengonversi kode menjadi for loop.',
         'Nilai kembalian fungsi menjadi 0.',
@@ -2209,7 +2487,8 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
         'Kompilasi langsung memunculkan syntax error.',
       ],
       'correct': 2,
-      'explanation': 'Base Case adalah syarat mutlak penghenti rekursi. Tanpa Base Case, Call Stack akan kehabisan ruang memori dan memicu crash Stack Overflow.',
+      'explanation':
+          'Base Case adalah syarat mutlak penghenti rekursi. Tanpa Base Case, Call Stack akan kehabisan ruang memori dan memicu crash Stack Overflow.',
     },
   ];
 
@@ -2232,11 +2511,12 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
         _hasAnswered = false;
       });
     } else {
-      // Selesai kuis
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('🎉 Sesi Kuis Selesai! Kamu mendapatkan +$_scoreXp XP!'),
-          backgroundColor: const Color(0xFF10B981),
+          content: Text(
+            'Sesi Evaluasi Selesai! Kamu mengumpulkan +$_scoreXp XP!',
+          ),
+          backgroundColor: AppColors.successGreen,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -2251,36 +2531,62 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
     final q = _quizQuestions[_questionIndex];
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 110.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Kuis & XP
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Soal ${_questionIndex + 1} dari ${_quizQuestions.length}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.pillBg(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
+                ),
+                child: Text(
+                  'Pertanyaan ${_questionIndex + 1} / ${_quizQuestions.length}',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                  color: AppColors.pillBg(isDark),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderColor(isDark)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.bolt_rounded, color: Color(0xFFF59E0B), size: 14),
+                    const Icon(
+                      Icons.bolt_rounded,
+                      color: AppColors.amberBadge,
+                      size: 15,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '+$_scoreXp XP',
-                      style: const TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ],
                 ),
@@ -2288,152 +2594,177 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
             ],
           ),
           const SizedBox(height: 14),
-
-          // Kotak Pertanyaan
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF131B2E),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.borderColor(isDark)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'Evaluasi Kognitif Adaptif',
-                    style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+                Text(
+                  'EVALUASI KOGNITIF ADAPTIF',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   q['question'],
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700, height: 1.4),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // 4 Opsi Jawaban (Respon Warna Langsung <50ms)
+          const SizedBox(height: 14),
           ...List.generate((q['options'] as List).length, (index) {
             final optionText = q['options'][index];
             final isSelected = _selectedOption == index;
             final isCorrect = q['correct'] == index;
 
-            Color bgColor = const Color(0xFF131B2E);
-            Color borderColor = const Color(0xFF1E293B);
-            Color textColor = Colors.white;
+            Color bgColor = AppColors.surface(isDark);
+            Color borderColor = AppColors.borderColor(isDark);
+            Color textColor = AppColors.textPrimary(isDark);
 
             if (_hasAnswered) {
               if (isCorrect) {
-                bgColor = const Color(0xFF10B981).withValues(alpha: 0.2);
-                borderColor = const Color(0xFF10B981);
-                textColor = const Color(0xFF34D399);
+                // ignore: deprecated_member_use
+                bgColor = AppColors.successGreen.withOpacity(0.12);
+                borderColor = AppColors.successGreen;
               } else if (isSelected && !isCorrect) {
-                bgColor = const Color(0xFFEF4444).withValues(alpha: 0.2);
-                borderColor = const Color(0xFFEF4444);
-                textColor = const Color(0xFFF87171);
+                // ignore: deprecated_member_use
+                bgColor = AppColors.error.withOpacity(0.12);
+                borderColor = AppColors.error;
               }
             }
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
-              child: InkWell(
-                onTap: () => _selectOption(index),
-                borderRadius: BorderRadius.circular(14),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 100),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: borderColor, width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Center(
-                          child: Text(
-                            ['A', 'B', 'C', 'D'][index],
-                            style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 11),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _selectOption(index),
+                  borderRadius: BorderRadius.circular(18),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 13,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: borderColor, width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: AppColors.pillBg(isDark),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Center(
+                            child: Text(
+                              ['A', 'B', 'C', 'D'][index],
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          optionText,
-                          style: TextStyle(color: textColor, fontSize: 12, height: 1.3),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            optionText,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 12.5,
+                              height: 1.35,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             );
           }),
-
-          // Kotak Penjelasan Rasional AI
           if (_hasAnswered) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF131B2E),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.3)),
+                color: AppColors.surface(isDark),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.borderColor(isDark)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: const [
-                      Icon(Icons.auto_awesome, color: Color(0xFFA855F7), size: 15),
-                      SizedBox(width: 6),
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: AppColors.violetAi,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        'Penjelasan Rasional AI',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        'Rasional Kognitif AI',
+                        style: TextStyle(
+                          color: AppColors.textPrimary(isDark),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     q['explanation'],
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, height: 1.4),
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Tombol Soal Berikutnya
+            const SizedBox(height: 14),
             SizedBox(
               height: 46,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: _nextQuestion,
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: Text(
-                  _questionIndex == _quizQuestions.length - 1 ? 'Selesaikan Kuis' : 'Pertanyaan Berikutnya',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF38BDF8),
-                  foregroundColor: const Color(0xFF0B0F17),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: AppColors.buttonPrimary(isDark),
+                  foregroundColor: AppColors.buttonText(isDark),
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(
+                  _questionIndex == _quizQuestions.length - 1
+                      ? 'Selesaikan Evaluasi'
+                      : 'Pertanyaan Berikutnya',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -2445,7 +2776,7 @@ class _ActiveRecallTabState extends State<ActiveRecallTab> {
 }
 
 // ============================================================================
-// 7. TAB AKUN & PROFIL MAHASISWA (LENGKAP DENGAN LOGOUT KEMBALI KE LOGIN)
+// 7. TAB AKUN & PROFIL MAHASISWA (DUAL THEME MINIMALIST SAAS)
 // ============================================================================
 class AccountTab extends StatelessWidget {
   final String userName;
@@ -2463,123 +2794,180 @@ class AccountTab extends StatelessWidget {
 
   String _getInitials(String name) {
     final parts = name.trim().split(' ');
-    if (parts.isEmpty) return 'AF';
-    if (parts.length == 1) return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+    if (parts.isEmpty) return 'MH';
+    if (parts.length == 1) {
+      return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+    }
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 110.0),
       child: Column(
         children: [
-          const SizedBox(height: 10),
-          // Avatar & Inisial
           Container(
-            width: 70,
-            height: 70,
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.borderColor(isDark)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.buttonPrimary(isDark),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _getInitials(userName),
+                      style: TextStyle(
+                        color: AppColors.buttonText(isDark),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  userName,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.pillBg(isDark),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.borderColor(isDark)),
+                  ),
+                  child: Text(
+                    '$userNim • $userRole D3 TI SV UNS',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildStatBox(
+                      isDark,
+                      '12 Hari',
+                      'Streak',
+                      Icons.local_fire_department_rounded,
+                      AppColors.amberBadge,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatBox(
+                      isDark,
+                      '350 XP',
+                      'Total XP',
+                      Icons.bolt_rounded,
+                      AppColors.electricSky,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatBox(
+                      isDark,
+                      '#3',
+                      'Peringkat',
+                      Icons.emoji_events_rounded,
+                      AppColors.violetAi,
+                    ),
+                  ],
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                _getInitials(userName),
-                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800),
-              ),
-            ),
           ),
-          const SizedBox(height: 12),
-
-          Text(
-            userName,
-            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'NIM: $userNim • $userRole D3 TI SV UNS',
-            style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 18),
-
-          // Statistik Belajar 3 Kotak
-          Row(
-            children: [
-              _buildStatBox('7 Hari', 'Streak Api', Icons.local_fire_department_rounded, const Color(0xFFFF7A00)),
-              const SizedBox(width: 10),
-              _buildStatBox('2,850', 'Total XP', Icons.bolt_rounded, const Color(0xFFF59E0B)),
-              const SizedBox(width: 10),
-              _buildStatBox('#3', 'Peringkat', Icons.emoji_events_rounded, const Color(0xFF38BDF8)),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Menu Opsi Profil
+          const SizedBox(height: 14),
           _buildMenuTile(
+            isDark: isDark,
+            icon: Icons.dark_mode_outlined,
+            title: isDark
+                ? 'Tema Aplikasi: Dark Mode'
+                : 'Tema Aplikasi: Light Mode (Web Default)',
+            subtitle: 'Ketuk untuk beralih antara Light Mode & Dark Mode',
+            onTap: AppTheme.toggleTheme,
+          ),
+          _buildMenuTile(
+            isDark: isDark,
             icon: Icons.military_tech_rounded,
             title: 'Koleksi Lencana Prestasi',
-            subtitle: '3 dari 6 Lencana Terbuka',
+            subtitle: 'Algo Master • Gold Tier Terbuka',
             onTap: () {},
           ),
           _buildMenuTile(
+            isDark: isDark,
             icon: Icons.history_rounded,
-            title: 'Riwayat Kuis Kognitif',
+            title: 'Riwayat Log Telemetri',
             subtitle: 'Akurasi Rata-rata 85%',
             onTap: () {},
           ),
           _buildMenuTile(
-            icon: Icons.school_outlined,
-            title: 'Kurikulum Program Studi',
-            subtitle: 'Teknik Informatika SV UNS',
-            onTap: () {},
-          ),
-          _buildMenuTile(
+            isDark: isDark,
             icon: Icons.logout_rounded,
             title: 'Keluar Akun',
             subtitle: 'Kembali ke halaman autentikasi',
             isDestructive: true,
             onTap: onLogout,
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildStatBox(String value, String label, IconData icon, Color color) {
+  Widget _buildStatBox(
+    bool isDark,
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF131B2E),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF1E293B)),
+          color: AppColors.pillBg(isDark),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColor(isDark)),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 20),
+            Icon(icon, color: color, size: 18),
             const SizedBox(height: 4),
             Text(
               value,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+              ),
             ),
-            const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: 10,
+              ),
             ),
           ],
         ),
@@ -2588,6 +2976,7 @@ class AccountTab extends StatelessWidget {
   }
 
   Widget _buildMenuTile({
+    required bool isDark,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -2597,33 +2986,46 @@ class AccountTab extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF131B2E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E293B)),
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderColor(isDark)),
       ),
       child: Material(
         color: Colors.transparent,
         child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           onTap: onTap,
           dense: true,
           leading: Icon(
             icon,
-            color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF38BDF8),
+            color:
+                isDestructive ? AppColors.error : AppColors.textPrimary(isDark),
             size: 20,
           ),
           title: Text(
             title,
             style: TextStyle(
-              color: isDestructive ? const Color(0xFFEF4444) : Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+              color: isDestructive
+                  ? AppColors.error
+                  : AppColors.textPrimary(isDark),
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
             ),
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+            style: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 10.5,
+            ),
           ),
-          trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 12),
+          trailing: Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: AppColors.textMutedColor(isDark),
+            size: 12,
+          ),
         ),
       ),
     );
@@ -2631,7 +3033,7 @@ class AccountTab extends StatelessWidget {
 }
 
 // ============================================================================
-// 8. MODAL PEMUTAR VIDEO DENGAN TIMER REAL-TIME (DIPUTAR DARI AWAL - AKHIR)
+// 8. MODAL PEMUTAR VIDEO KULIAH (DUAL THEME MINIMALIST SAAS)
 // ============================================================================
 class VideoLecturePlayerModal extends StatefulWidget {
   final String moduleTitle;
@@ -2639,14 +3041,15 @@ class VideoLecturePlayerModal extends StatefulWidget {
   const VideoLecturePlayerModal({super.key, required this.moduleTitle});
 
   @override
-  State<VideoLecturePlayerModal> createState() => _VideoLecturePlayerModalState();
+  State<VideoLecturePlayerModal> createState() =>
+      _VideoLecturePlayerModalState();
 }
 
 class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
   Timer? _timer;
   bool _isPlaying = true;
   int _currentSeconds = 0;
-  final int _totalSeconds = 630; // 10 menit 30 detik (630 detik)
+  final int _totalSeconds = 630;
 
   @override
   void initState() {
@@ -2685,17 +3088,20 @@ class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
     final progress = (_currentSeconds / _totalSeconds).clamp(0.0, 1.0);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Color(0xFF0B0F17),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+      height: MediaQuery.of(context).size.height * 0.82,
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
         ),
-        border: Border(top: BorderSide(color: Color(0xFF1E293B), width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.borderColor(isDark), width: 1.0),
+        ),
       ),
       child: Column(
         children: [
@@ -2705,40 +3111,42 @@ class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF334155),
+                color: AppColors.borderColor(isDark),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Video Kuliah Penunjang',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textSecondary(isDark),
+                    size: 20,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 4),
-
-          // Player Surface dengan Timer Berjalan
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18),
-            height: 190,
+            height: 185,
             decoration: BoxDecoration(
               color: const Color(0xFF0F172A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.borderColor(isDark)),
             ),
             child: Stack(
               children: [
@@ -2748,78 +3156,68 @@ class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
                     children: [
                       Icon(
                         Icons.smart_display_rounded,
-                        color: _isPlaying ? const Color(0xFF38BDF8) : Colors.white30,
-                        size: 48,
+                        color: _isPlaying ? Colors.white : Colors.white54,
+                        size: 44,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        _isPlaying ? 'Memutar Materi Kuliah...' : 'Jeda (Paused)',
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        _isPlaying
+                            ? 'Memutar Materi Kuliah...'
+                            : 'Jeda (Paused)',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // Controls Bar Bawah
                 Positioned(
                   bottom: 0,
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    color: Colors.black.withValues(alpha: 0.8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            trackHeight: 3.0,
-                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                            activeTrackColor: const Color(0xFF38BDF8),
-                            thumbColor: const Color(0xFF38BDF8),
+                        Text(
+                          '${_formatTime(_currentSeconds)} / ${_formatTime(_totalSeconds)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
+                        Expanded(
                           child: Slider(
                             value: progress,
+                            activeColor: Colors.white,
+                            inactiveColor: Colors.white24,
                             onChanged: (val) {
                               setState(() {
-                                _currentSeconds = (val * _totalSeconds).round();
+                                _currentSeconds =
+                                    (val * _totalSeconds).round();
                               });
                             },
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${_formatTime(_currentSeconds)} / ${_formatTime(_totalSeconds)}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.replay_rounded, color: Colors.white, size: 18),
-                                  onPressed: () {
-                                    setState(() {
-                                      _currentSeconds = 0;
-                                      _isPlaying = true;
-                                    });
-                                    _startTimer();
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                    color: const Color(0xFF38BDF8),
-                                    size: 24,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isPlaying = !_isPlaying;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
+                        IconButton(
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPlaying = !_isPlaying;
+                            });
+                          },
                         ),
                       ],
                     ),
@@ -2829,8 +3227,6 @@ class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Ringkasan Transkrip Video
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -2839,24 +3235,40 @@ class _VideoLecturePlayerModalState extends State<VideoLecturePlayerModal> {
                 children: [
                   Text(
                     widget.moduleTitle,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Instruktur: Dr. Aris Sudrajat • Dosen Komputasi',
-                    style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w600),
+                  Text(
+                    'Instruktur: Dr. Aris Sudrajat • Dosen Komputasi SV UNS',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Poin Penting Kuliah:',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                  Text(
+                    'Ringkasan Materi:',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDark),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     '1. For Loop optimal untuk traversing array dengan batas indeks terukur pasti O(n).\n'
                     '2. While Loop mengevaluasi kondisi dinamis sebelum memasuki blok kode.\n'
-                    '3. Gunakan kata kunci break untuk menghentikan iterasi seawal mungkin demi efisiensi siklus CPU.',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, height: 1.45),
+                    '3. Gunakan klausa break untuk menghentikan iterasi lebih awal demi efisiensi siklus CPU.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
